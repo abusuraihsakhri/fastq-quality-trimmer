@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  fastq-quality-trimmer:
+    build: .
+    container_name: fastq-quality-trimmer
+    ports:
+      - "8000:8000"
+    environment:
+      - AUDIT_SECRET_KEY=fastq-quality-trimmer-prod-audit-key-2026
+      - MODEL_PROVIDER=mock
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
