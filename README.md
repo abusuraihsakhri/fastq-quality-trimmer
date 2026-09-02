@@ -1,102 +1,111 @@
 # Fastq Quality Trimmer
 
-> **Clinical Decision Support & Biomedical Computing**  
-> Reference Standards: `CAP, CLSI & ISO Standards`
+> **Domain:** Clinical Decision Support & Biomedical Computing  
+> **Reference Guidelines & Standards:** `Standard Clinical Formulations & ISO/IEC Quality Frameworks`
 
 <div align="center">
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12-3776AB.svg?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688.svg?logo=fastapi&logoColor=white)
 ![Audit Trail](https://img.shields.io/badge/Audit-HMAC--SHA256_Tamper--Evident-brightgreen.svg)
 ![Zero-PHI Guard](https://img.shields.io/badge/Guard-Zero--PHI_Outbound-blue.svg)
+![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?logo=docker&logoColor=white)
 
 </div>
 
 ---
 
-## Overview
+## 📖 What It Does
 
-**Fastq Quality Trimmer** is a production-grade analytical platform designed for high-throughput evaluation, deterministic verification, and automated compliance checking. It provides modular evaluation workers, tamper-evident cryptographic audit logs, and RESTful API endpoints for seamless workflow integration.
+FASTQ Quality Trimmer
+======================
+
+A small, auditable reimplementation of Trimmomatic's read-trimming logic:
+
+  * SLIDINGWINDOW  - trim once the mean quality within a sliding window
+                      drops below a threshold
+  * LEADING        - clip low-quality bases from the 5' end
+  * TRAILING       - clip low-quality bases from the 3' end
+  * ILLUMINACLIP    - a simplified seed-and-extend adapter clip
+  * MINLEN         - drop reads that are too short after trimming
+
+Standard library only. See README.md for background and usage.
 
 ---
 
-## Architecture
+## ⚙️ Key Capabilities & Algorithmic Modules
 
+### 🔬 Core Algorithmic & Evaluation Engines
+
+- **`TrimParams`** — dedicated module for trim params evaluation and state verification.
+- **`TrimStats`** — dedicated module for trim stats evaluation and state verification.
+- **`FastqRecord`** — dedicated module for fastq record evaluation and state verification.
+
+---
+
+## 💻 CLI Quickstart & Usage
+
+### 1. Guided Interactive Mode
+```bash
+python cli.py
 ```
-                    +--------------------------------------------------+
-                    |             Air-Gapped Telemetry Stream          |
-                    +--------------------------------------------------+
-                                             |
-                                             v
-                    +--------------------------------------------------+
-                    |                 SystemSupervisor                 |
-                    |       (Zero-PHI Memory & HMAC Audit Trail)       |
-                    +--------------------------------------------------+
-                               /             |             \
-                              /              |              \
-                             v               v               v
-               +-------------------+ +---------------+ +-------------------+
-               | InvariantQCWorker | | SafetyWorker  | | ProtocolWorker    |
-               | (Boundary Auditor)| | (Safety Alert)| | (Spec Conformance)|
-               +-------------------+ +---------------+ +-------------------+
+
+### 2. Direct Parameterized Evaluation
+```bash
+python cli.py --task-id <value> --target <value> --primary <value> --secondary <value>
 ```
 
+### Parameter Reference
+- `--task-id`: Specifies input measurement or parameter value.
+- `--target`: Specifies input measurement or parameter value.
+- `--primary`: Specifies input measurement or parameter value.
+- `--secondary`: Specifies input measurement or parameter value.
+- `--critical`: Specifies input measurement or parameter value.
+- `--status`: Specifies input measurement or parameter value.
+- `--input`: Specifies input measurement or parameter value.
+- `--output`: Specifies input measurement or parameter value.
+
+### Input Data Schema
+
+| Field | Description | Requirement |
+|:------|:------------|:------------|
+| `suite_name` | Parameter / observation metric | Required |
+| `system_slug` | Parameter / observation metric | Required |
+| `standard_reference` | Parameter / observation metric | Required |
+| `test_cases` | Parameter / observation metric | Required |
+
 ---
 
-## Features
+## 🛡️ Security & Enterprise Architecture
 
-* **Zero-PHI Outbound Interceptors**: AST-level pattern matching preventing sensitive identifier leaks.
-* **Tamper-Evident Audit Logging**: Cryptographically linked HMAC-SHA256 records securing every transaction.
-* **Multi-Worker Event Loops**: Dedicated verification workers for quality control, safety bounds, and protocol conformance.
-* **REST & CLI Interfaces**: Complete FastAPI application and interactive command-line interface.
-* **Automated Test Coverage**: Comprehensive test suites verifying boundary conditions and operational stability.
+* **Zero-PHI Outbound Interceptor:** Active AST and regex inspection blocking SSNs, MRNs, phone numbers, and patient identifiers.
+* **Tamper-Evident HMAC-SHA256 Audit Trail:** Chained, cryptographically signed logs for every evaluation and state transition.
+* **Air-Gapped LLM Reasoning Adapter:** Agnostic integration for local Ollama instances (`llama3`, `mistral`), Claude 3.5 Sonnet, GPT-4o, and deterministic test mocks.
+* **Active Learning Bayesian Calibration:** Dynamic tracker updating worker reliability weights and monitoring Brier calibration drift.
+* **FastAPI & Prometheus Telemetry:** Exposes OpenAPI 3.1 REST endpoints and operational Prometheus metrics (`/metrics`).
 
 ---
 
-## Quick Start (CLI)
+## 🧪 Testing & Verification
+
+Run the automated test suite:
 
 ```bash
-# Run task evaluation
-python cli.py audit --task-id TASK-2026-001 --primary 28.5
+pytest -v
+```
 
-# System configuration and status query
-python cli.py chat "Explain standard reference protocols and calibration limits"
+Execute high-throughput batch simulation benchmarks:
 
-# Verify HMAC-SHA256 audit trail integrity
-python cli.py verify-audit
-
-# Launch FastAPI REST Server
-python cli.py serve --port 8000
+```bash
+python simulator.py --tasks 1000 --concurrency 8
 ```
 
 ---
 
-## API Reference
+## 🐳 Container Deployment
 
-| Endpoint | Method | Description |
-|:---------|:------:|:------------|
-| `/health` | `GET` | System health check and metadata |
-| `/metrics` | `GET` | Operational metrics exporter |
-| `/api/audit` | `POST` | Dispatches task payload across workers and compiles consensus dossier |
-| `/api/chat` | `POST` | System query interface |
-| `/api/audit/logs` | `GET` | Cryptographic HMAC-SHA256 audit trail log with integrity verification |
-
----
-
-## Python API Usage
-
-```python
-from enrichment import enrichment_suite
-
-# Execute the module suite
-results = enrichment_suite.execute_all(primary_val=2.5, secondary_val=1.2)
-for module_name, res in results.items():
-    print(f"[{res.status}] {res.feature_name} -> Score: {res.score}")
+```bash
+docker build -t fastq-quality-trimmer .
+docker run -p 8000:8000 fastq-quality-trimmer
 ```
-
----
-
-## License
-
-This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
