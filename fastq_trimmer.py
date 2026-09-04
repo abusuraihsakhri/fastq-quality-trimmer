@@ -20,6 +20,7 @@ from __future__ import annotations
 import argparse
 import sys
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Iterator, Optional, Tuple
 
 
@@ -163,6 +164,29 @@ class TrimParams:
     adapter_seed_len: int = 8
     adapter_min_match: int = 10
     adapter_max_mismatch_rate: float = 0.1
+
+    def __post_init__(self):
+        """Validate trim parameters after initialization."""
+        if self.phred not in (33, 64):
+            raise ValueError(f"phred must be 33 or 64, got {self.phred}")
+        if self.window_size < 1:
+            raise ValueError(f"window_size must be >= 1, got {self.window_size}")
+        if self.window_quality < 0:
+            raise ValueError(f"window_quality must be >= 0, got {self.window_quality}")
+        if self.leading < 0:
+            raise ValueError(f"leading must be >= 0, got {self.leading}")
+        if self.trailing < 0:
+            raise ValueError(f"trailing must be >= 0, got {self.trailing}")
+        if self.minlen < 1:
+            raise ValueError(f"minlen must be >= 1, got {self.minlen}")
+        if self.adapter_seed_len < 1:
+            raise ValueError(f"adapter_seed_len must be >= 1, got {self.adapter_seed_len}")
+        if self.adapter_min_match < 1:
+            raise ValueError(f"adapter_min_match must be >= 1, got {self.adapter_min_match}")
+        if not (0.0 <= self.adapter_max_mismatch_rate <= 1.0):
+            raise ValueError(f"adapter_max_mismatch_rate must be between 0.0 and 1.0, got {self.adapter_max_mismatch_rate}")
+        if self.adapter is not None and len(self.adapter) == 0:
+            raise ValueError("adapter must be None or a non-empty string")
 
 
 @dataclass
@@ -386,8 +410,30 @@ def main(argv: Optional[list[str]] = None) -> int:
     args = parser.parse_args(argv)
     params = params_from_args(args)
 
-    with open(args.input, "r") as in_f, open(args.output, "w") as out_f:
-        stats = process_fastq(iter(in_f), out_f, params)
+    # Validate input file exists
+    input_path = Path(args.input)
+    if not input_path.is_file():
+        print(f"Error: Input file not found: {args.input}", file=sys.stderr)
+        return 1
+
+    # Validate output path is writable
+    output_path = Path(args.output)
+    try:
+        # Ensure parent directory exists
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+    except OSError as e:
+        print(f"Error: Cannot create output directory: {e}", file=sys.stderr)
+        return 1
+
+    try:
+        with open(input_path, "r") as in_f, open(output_path, "w") as out_f:
+            stats = process_fastq(iter(in_f), out_f, params)
+    except PermissionError as e:
+        print(f"Error: Permission denied: {e}", file=sys.stderr)
+        return 1
+    except OSError as e:
+        print(f"Error: I/O error: {e}", file=sys.stderr)
+        return 1
 
     print_summary(stats)
     return 0

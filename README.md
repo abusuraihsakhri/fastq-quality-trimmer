@@ -1,111 +1,165 @@
 # Fastq Quality Trimmer
 
-> **Domain:** Clinical Decision Support & Biomedical Computing  
-> **Reference Guidelines & Standards:** `Standard Clinical Formulations & ISO/IEC Quality Frameworks`
-
-<div align="center">
-
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12-3776AB.svg?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688.svg?logo=fastapi&logoColor=white)
-![Audit Trail](https://img.shields.io/badge/Audit-HMAC--SHA256_Tamper--Evident-brightgreen.svg)
-![Zero-PHI Guard](https://img.shields.io/badge/Guard-Zero--PHI_Outbound-blue.svg)
-![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?logo=docker&logoColor=white)
 
-</div>
+A small, auditable reimplementation of Trimmomatic's read-trimming logic for FASTQ files.
 
----
+## What It Does
 
-## 📖 What It Does
+FASTQ Quality Trimmer provides the following trimming operations:
 
-FASTQ Quality Trimmer
-======================
+- **SLIDINGWINDOW** - Trim once the mean quality within a sliding window drops below a threshold
+- **LEADING** - Clip low-quality bases from the 5' end
+- **TRAILING** - Clip low-quality bases from the 3' end
+- **ILLUMINACLIP** - A simplified seed-and-extend adapter clip
+- **MINLEN** - Drop reads that are too short after trimming
 
-A small, auditable reimplementation of Trimmomatic's read-trimming logic:
+## Installation
 
-  * SLIDINGWINDOW  - trim once the mean quality within a sliding window
-                      drops below a threshold
-  * LEADING        - clip low-quality bases from the 5' end
-  * TRAILING       - clip low-quality bases from the 3' end
-  * ILLUMINACLIP    - a simplified seed-and-extend adapter clip
-  * MINLEN         - drop reads that are too short after trimming
-
-Standard library only. See README.md for background and usage.
-
----
-
-## ⚙️ Key Capabilities & Algorithmic Modules
-
-### 🔬 Core Algorithmic & Evaluation Engines
-
-- **`TrimParams`** — dedicated module for trim params evaluation and state verification.
-- **`TrimStats`** — dedicated module for trim stats evaluation and state verification.
-- **`FastqRecord`** — dedicated module for fastq record evaluation and state verification.
-
----
-
-## 💻 CLI Quickstart & Usage
-
-### 1. Guided Interactive Mode
 ```bash
-python cli.py
+# Clone the repository
+git clone https://github.com/abusuraihsakhri/fastq-quality-trimmer.git
+cd fastq-quality-trimmer
+
+# Install dependencies
+pip install -e .
+
+# Or install with development dependencies
+pip install -e ".[dev]"
 ```
 
-### 2. Direct Parameterized Evaluation
+## Usage
+
+### Command Line Interface
+
+Trim a FASTQ file:
+
 ```bash
-python cli.py --task-id <value> --target <value> --primary <value> --secondary <value>
+python fastq_trimmer.py -i input.fastq -o output.fastq
 ```
 
-### Parameter Reference
-- `--task-id`: Specifies input measurement or parameter value.
-- `--target`: Specifies input measurement or parameter value.
-- `--primary`: Specifies input measurement or parameter value.
-- `--secondary`: Specifies input measurement or parameter value.
-- `--critical`: Specifies input measurement or parameter value.
-- `--status`: Specifies input measurement or parameter value.
-- `--input`: Specifies input measurement or parameter value.
-- `--output`: Specifies input measurement or parameter value.
+With custom parameters:
 
-### Input Data Schema
+```bash
+python fastq_trimmer.py -i input.fastq -o output.fastq \
+    --phred 33 \
+    --window-size 4 \
+    --window-quality 15 \
+    --leading 3 \
+    --trailing 3 \
+    --minlen 36 \
+    --adapter AGATCGGAAGAGC
+```
 
-| Field | Description | Requirement |
-|:------|:------------|:------------|
-| `suite_name` | Parameter / observation metric | Required |
-| `system_slug` | Parameter / observation metric | Required |
-| `standard_reference` | Parameter / observation metric | Required |
-| `test_cases` | Parameter / observation metric | Required |
+### CLI Parameters
 
----
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `-i, --input` | (required) | Input FASTQ file |
+| `-o, --output` | (required) | Output (trimmed) FASTQ file |
+| `--phred` | 33 | Quality encoding (33 or 64) |
+| `--window-size` | 4 | SLIDINGWINDOW: bases per window |
+| `--window-quality` | 15.0 | SLIDINGWINDOW: minimum mean quality |
+| `--leading` | 3 | LEADING: minimum quality at read start |
+| `--trailing` | 3 | TRAILING: minimum quality at read end |
+| `--minlen` | 36 | MINLEN: minimum read length to keep |
+| `--adapter` | None | Adapter sequence to clip |
+| `--adapter-seed-len` | 8 | Adapter clip: exact-match seed length |
+| `--adapter-min-match` | 10 | Adapter clip: minimum aligned overlap |
+| `--adapter-max-mismatch-rate` | 0.1 | Adapter clip: max mismatch fraction |
 
-## 🛡️ Security & Enterprise Architecture
+### Python API
 
-* **Zero-PHI Outbound Interceptor:** Active AST and regex inspection blocking SSNs, MRNs, phone numbers, and patient identifiers.
-* **Tamper-Evident HMAC-SHA256 Audit Trail:** Chained, cryptographically signed logs for every evaluation and state transition.
-* **Air-Gapped LLM Reasoning Adapter:** Agnostic integration for local Ollama instances (`llama3`, `mistral`), Claude 3.5 Sonnet, GPT-4o, and deterministic test mocks.
-* **Active Learning Bayesian Calibration:** Dynamic tracker updating worker reliability weights and monitoring Brier calibration drift.
-* **FastAPI & Prometheus Telemetry:** Exposes OpenAPI 3.1 REST endpoints and operational Prometheus metrics (`/metrics`).
+```python
+from fastq_trimmer import TrimParams, process_fastq
 
----
+params = TrimParams(
+    phred=33,
+    window_size=4,
+    window_quality=15.0,
+    leading=3,
+    trailing=3,
+    minlen=36,
+    adapter="AGATCGGAAGAGC"
+)
 
-## 🧪 Testing & Verification
+with open("input.fastq") as in_f, open("output.fastq", "w") as out_f:
+    stats = process_fastq(iter(in_f), out_f, params)
 
-Run the automated test suite:
+print(f"Processed: {stats.reads_processed}, Retained: {stats.reads_retained}")
+```
+
+## Testing
+
+Run the full test suite:
 
 ```bash
 pytest -v
 ```
 
-Execute high-throughput batch simulation benchmarks:
+Run specific test files:
 
 ```bash
-python simulator.py --tasks 1000 --concurrency 8
+pytest test_fastq_trimmer.py -v
+pytest tests/ -v
 ```
 
----
+## Security
 
-## 🐳 Container Deployment
+### PHI Guard
+The system includes a Zero-PHI Outbound Interceptor that blocks SSNs, MRNs, phone numbers, and patient identifiers from being logged or output.
+
+### Audit Trail
+HMAC-SHA256 tamper-evident audit trail for all operations. Set the `AUDIT_SECRET_KEY` environment variable for production use:
 
 ```bash
+# Generate a secure key
+python -c "import os; print(os.urandom(32).hex())"
+
+# Set it
+export AUDIT_SECRET_KEY="your-secure-key-hello"
+```
+
+See `.env.example` for configuration options.
+
+## Docker Deployment
+
+```bash
+# Build and run with Docker Compose
+AUDIT_SECRET_KEY=$(python -c "import os; print(os.urandom(32).hex())") docker-compose up --build
+
+# Or build and run manually
 docker build -t fastq-quality-trimmer .
-docker run -p 8000:8000 fastq-quality-trimmer
+docker run -p 8000:8000 -e AUDIT_SECRET_KEY="your-key" fastq-quality-trimmer
 ```
+
+## Project Structure
+
+```
+fastq-quality-trimmer/
+├── fastq_trimmer.py      # Core trimming algorithms and CLI
+├── cli.py                # Enterprise supervisor CLI
+├── enrichment.py         # Enrichment feature engines
+├── simulator.py          # High-throughput simulation
+├── agents/               # Multi-agent supervisor system
+│   ├── base.py           # Security, PHI guard, audit trail
+│   ├── models.py         # Pydantic data models
+│   ├── supervisor.py     # Supervisor orchestrator
+│   ├── workers.py        # Specialized worker agents
+│   ├── api.py            # FastAPI REST server
+│   ├── metrics.py        # Prometheus metrics
+│   ├── learning.py       # Bayesian calibration engine
+│   └── streamer.py       # WebSocket telemetry
+├── tests/                # Pytest test suite
+├── web/                  # Operations console (HTML)
+├── pyproject.toml        # Project metadata and dependencies
+├── Dockerfile            # Container build
+├── docker-compose.yml    # Container orchestration
+└── .github/workflows/    # CI/CD pipeline
+```
+
+## License
+
+MIT License - see [LICENSE](LICENSE) for details.

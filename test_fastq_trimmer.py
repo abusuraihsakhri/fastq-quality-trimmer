@@ -158,5 +158,67 @@ class TestProcessFastqEndToEnd(unittest.TestCase):
         self.assertNotIn("@read3", output_lines)
 
 
+class TestTrimParamsValidation(unittest.TestCase):
+    def test_default_params_valid(self):
+        params = TrimParams()
+        self.assertEqual(params.phred, 33)
+        self.assertEqual(params.window_size, 4)
+
+    def test_invalid_phred_raises(self):
+        with self.assertRaises(ValueError):
+            TrimParams(phred=42)
+
+    def test_invalid_window_size_raises(self):
+        with self.assertRaises(ValueError):
+            TrimParams(window_size=0)
+
+    def test_negative_window_quality_raises(self):
+        with self.assertRaises(ValueError):
+            TrimParams(window_quality=-1)
+
+    def test_negative_leading_raises(self):
+        with self.assertRaises(ValueError):
+            TrimParams(leading=-1)
+
+    def test_negative_trailing_raises(self):
+        with self.assertRaises(ValueError):
+            TrimParams(trailing=-1)
+
+    def test_invalid_minlen_raises(self):
+        with self.assertRaises(ValueError):
+            TrimParams(minlen=0)
+
+    def test_invalid_adapter_seed_len_raises(self):
+        with self.assertRaises(ValueError):
+            TrimParams(adapter_seed_len=0)
+
+    def test_invalid_adapter_min_match_raises(self):
+        with self.assertRaises(ValueError):
+            TrimParams(adapter_min_match=0)
+
+    def test_invalid_mismatch_rate_raises(self):
+        with self.assertRaises(ValueError):
+            TrimParams(adapter_max_mismatch_rate=1.5)
+
+    def test_negative_mismatch_rate_raises(self):
+        with self.assertRaises(ValueError):
+            TrimParams(adapter_max_mismatch_rate=-0.1)
+
+    def test_empty_adapter_raises(self):
+        with self.assertRaises(ValueError):
+            TrimParams(adapter="")
+
+    def test_valid_adapter_accepted(self):
+        params = TrimParams(adapter="AGATCGGAAGAGC")
+        self.assertEqual(params.adapter, "AGATCGGAAGAGC")
+
+
+class TestCLIFileValidation(unittest.TestCase):
+    def test_missing_input_file_returns_error(self):
+        from fastq_trimmer import main
+        result = main(["-i", "/nonexistent/path.fastq", "-o", "/tmp/out.fastq"])
+        self.assertEqual(result, 1)
+
+
 if __name__ == "__main__":
     unittest.main()
