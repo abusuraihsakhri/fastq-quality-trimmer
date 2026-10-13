@@ -1,13 +1,11 @@
-version: '3.8'
-
 services:
   fastq-quality-trimmer:
     build: .
     container_name: fastq-quality-trimmer
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     environment:
-      - AUDIT_SECRET_KEY=${AUDIT_SECRET_KEY:-please-change-me-in-production}
+      - AUDIT_SECRET_KEY=${AUDIT_SECRET_KEY:?Set AUDIT_SECRET_KEY to a strong random value}
       - MODEL_PROVIDER=mock
     restart: unless-stopped
     healthcheck:

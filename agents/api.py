@@ -2,9 +2,10 @@
 FastAPI REST API Server for Fastq Quality Trimmer.
 """
 from typing import Dict, Any, List
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from .base import AuditLogger, PHIGuard
+from .base import AuditLogger, PHIGuard, SecurityException
 from .models import SystemTaskPayload, ConsensusDossier
 from .supervisor import SystemSupervisor
 
@@ -12,9 +13,16 @@ supervisor = SystemSupervisor(model_provider="mock")
 
 app = FastAPI(
     title="Fastq Quality Trimmer API",
-    description="Enterprise Distributed Component Platform (Clinical & Biomedical AI)",
-    version="3.0.0-ENTERPRISE",
+    description="Auxiliary mock supervisor endpoints (not FASTQ read trimming)",
+    version="1.0.0",
 )
+
+
+@app.exception_handler(SecurityException)
+async def handle_sensitive_input(request: Request, exc: SecurityException):
+    return JSONResponse(status_code=422, content={
+        "detail": "Input contains a potentially sensitive identifier and was rejected."
+    })
 
 
 class ChatRequest(BaseModel):
@@ -23,7 +31,7 @@ class ChatRequest(BaseModel):
 
 @app.get("/health")
 def health():
-    return {"status": "HEALTHY", "service": "fastq-quality-trimmer", "domain": "Clinical & Biomedical AI", "standard": "CAP / CLSI / ISO Standards", "version": "3.0.0-ENTERPRISE"}
+    return {"status": "healthy", "service": "fastq-quality-trimmer", "version": "1.0.0"}
 
 
 @app.get("/metrics")
@@ -31,7 +39,7 @@ def metrics():
     return {
         "dossiers_processed_total": len(supervisor.dossier_registry),
         "audit_blocks_total": len(AuditLogger.get_trail()),
-        "system_status": "NOMINAL_OPTIMAL"
+        "system_status": "ready"
     }
 
 

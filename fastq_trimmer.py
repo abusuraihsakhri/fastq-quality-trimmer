@@ -18,7 +18,10 @@ Standard library only. See README.md for background and usage.
 from __future__ import annotations
 
 import argparse
+import math
+import os
 import sys
+import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterator, Optional, Tuple
@@ -34,6 +37,8 @@ PHRED_OFFSETS = {33: 33, 64: 64}
 def decode_quality(qual_str: str, phred: int) -> list[int]:
     """Convert a FASTQ quality string into a list of Phred quality scores."""
     offset = PHRED_OFFSETS[phred]
+    if any(ord(c) < offset or ord(c) > 126 for c in qual_str):
+        raise ValueError(f"Invalid Phred+{offset} quality character; expected ASCII {offset}–126")
     return [ord(c) - offset for c in qual_str]
 
 
@@ -171,7 +176,7 @@ class TrimParams:
             raise ValueError(f"phred must be 33 or 64, got {self.phred}")
         if self.window_size < 1:
             raise ValueError(f"window_size must be >= 1, got {self.window_size}")
-        if self.window_quality < 0:
+        if not math.isfinite(self.window_quality) or self.window_quality < 0:
             raise ValueError(f"window_quality must be >= 0, got {self.window_quality}")
         if self.leading < 0:
             raise ValueError(f"leading must be >= 0, got {self.leading}")
@@ -183,7 +188,7 @@ class TrimParams:
             raise ValueError(f"adapter_seed_len must be >= 1, got {self.adapter_seed_len}")
         if self.adapter_min_match < 1:
             raise ValueError(f"adapter_min_match must be >= 1, got {self.adapter_min_match}")
-        if not (0.0 <= self.adapter_max_mismatch_rate <= 1.0):
+        if not math.isfinite(self.adapter_max_mismatch_rate) or not (0.0 <= self.adapter_max_mismatch_rate <= 1.0):
             raise ValueError(f"adapter_max_mismatch_rate must be between 0.0 and 1.0, got {self.adapter_max_mismatch_rate}")
         if self.adapter is not None and len(self.adapter) == 0:
             raise ValueError("adapter must be None or a non-empty string")
@@ -217,6 +222,11 @@ def trim_read(seq: str, qual_str: str, params: TrimParams) -> Optional[Tuple[str
 
     Returns (trimmed_seq, trimmed_qual), or None if the read is dropped.
     """
+    if len(seq) != len(qual_str):
+        raise ValueError("Sequence/quality length mismatch")
+    # Validate the complete quality string, including any adapter tail.
+    decode_quality(qual_str, params.phred)
+
     # ILLUMINACLIP (simplified)
     if params.adapter:
         clip_pos = find_adapter_clip_pos(
@@ -278,15 +288,15 @@ def parse_fastq(lines: Iterator[str]) -> Iterator[FastqRecord]:
     """Yield FastqRecord objects from an iterable of lines (4 lines/record)."""
     while True:
         try:
-            header = next(lines).rstrip("\n")
+            header = next(lines).rstrip("\r\n")
         except StopIteration:
             return
         if header == "":
             continue
         try:
-            seq = next(lines).rstrip("\n")
-            plus = next(lines).rstrip("\n")
-            qual = next(lines).rstrip("\n")
+            seq = next(lines).rstrip("\r\n")
+            plus = next(lines).rstrip("\r\n")
+            qual = next(lines).rstrip("\r\n")
         except StopIteration:
             raise ValueError("Truncated FASTQ record at end of file") from None
 
@@ -318,7 +328,7 @@ def process_fastq(
 
         trimmed_seq, trimmed_qual = result
         stats.total_len_after += len(trimmed_seq)
-        out_file.write(f"{record.header}\n{trimmed_seq}\n+\n{trimmed_qual}\n")
+        out_file.write(f"{record.header}\n{trimmed_seq}\n{record.plus}\n{trimmed_qual}\n")
 
     return stats
 
@@ -416,8 +426,11 @@ def main(argv: Optional[list[str]] = None) -> int:
         print(f"Error: Input file not found: {args.input}", file=sys.stderr)
         return 1
 
-    # Validate output path is writable
+    # Never truncate the input in place.
     output_path = Path(args.output)
+    if input_path.resolve() == output_path.resolve():
+        print("Error: Input and output must be different files", file=sys.stderr)
+        return 1
     try:
         # Ensure parent directory exists
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -425,15 +438,22 @@ def main(argv: Optional[list[str]] = None) -> int:
         print(f"Error: Cannot create output directory: {e}", file=sys.stderr)
         return 1
 
+    # Write to a temporary sibling; malformed inputs never destroy existing outputs.
+    temp_path = None
     try:
-        with open(input_path, "r") as in_f, open(output_path, "w") as out_f:
-            stats = process_fastq(iter(in_f), out_f, params)
-    except PermissionError as e:
-        print(f"Error: Permission denied: {e}", file=sys.stderr)
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", newline="\n",
+                                         dir=output_path.parent, prefix=".fastq-",
+                                         suffix=".tmp", delete=False) as out_f:
+            temp_path = Path(out_f.name)
+            with open(input_path, "r", encoding="utf-8") as in_f:
+                stats = process_fastq(iter(in_f), out_f, params)
+        os.replace(temp_path, output_path)
+    except (OSError, UnicodeError, ValueError) as e:
+        print(f"Error: {e}", file=sys.stderr)
         return 1
-    except OSError as e:
-        print(f"Error: I/O error: {e}", file=sys.stderr)
-        return 1
+    finally:
+        if temp_path is not None:
+            temp_path.unlink(missing_ok=True)
 
     print_summary(stats)
     return 0

@@ -1,112 +1,133 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Fastq Quality Trimmer API",
-    "description": "Enterprise Distributed Component Platform (Clinical & Cryptographic AI) adhering to CAP / CLSI / NIST Standards.",
-    "version": "3.0.0-ENTERPRISE",
-    "contact": {
-      "name": "Dr. Abu Suraih Sakhri",
-      "url": "https://github.com/abusuraihsakhri"
-    }
+    "title": "FASTQ Quality Trimmer Auxiliary Supervisor API",
+    "version": "1.0.0",
+    "description": "Mock rule-based supervisor API for demonstrations. These endpoints do not trim FASTQ reads or perform clinical validation."
   },
   "paths": {
     "/health": {
       "get": {
-        "summary": "Health and metadata check",
+        "summary": "Health check",
         "responses": {
           "200": {
-            "description": "System optimal"
+            "description": "Service metadata"
           }
         }
       }
     },
     "/metrics": {
       "get": {
-        "summary": "Prometheus operational metrics",
+        "summary": "In-memory mock supervisor counts (JSON)",
         "responses": {
           "200": {
-            "description": "Prometheus text metrics"
+            "description": "Metric counters"
           }
         }
       }
     },
     "/api/audit": {
       "post": {
-        "summary": "Dispatch task payload across specialized workers",
+        "summary": "Evaluate mock supervisor task",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "task_id": {
-                    "type": "string"
-                  },
-                  "target_identifier": {
-                    "type": "string"
-                  },
-                  "primary_metric": {
-                    "type": "number"
-                  },
-                  "secondary_metric": {
-                    "type": "number"
-                  },
-                  "status_descriptor": {
-                    "type": "string"
-                  },
-                  "is_critical_flag": {
-                    "type": "boolean"
-                  }
-                },
-                "required": [
-                  "task_id",
-                  "target_identifier",
-                  "primary_metric"
-                ]
+                "$ref": "#/components/schemas/SystemTaskPayload"
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Consensus dossier with HMAC signature"
+            "description": "Mock consensus dossier"
+          },
+          "422": {
+            "description": "Payload validation or detected sensitive identifier"
           }
         }
       }
     },
     "/api/chat": {
       "post": {
-        "summary": "Air-gapped supervisory conversational assistant",
+        "summary": "Return deterministic mock response",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
+                "required": [
+                  "query"
+                ],
                 "properties": {
                   "query": {
                     "type": "string"
                   }
-                },
-                "required": [
-                  "query"
-                ]
+                }
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Supervisory response"
+            "description": "Mock response"
+          },
+          "422": {
+            "description": "Detected sensitive identifier"
           }
         }
       }
     },
     "/api/audit/logs": {
       "get": {
-        "summary": "Retrieve and cryptographically verify HMAC audit trail",
+        "summary": "Get in-memory HMAC chain snapshot",
         "responses": {
           "200": {
-            "description": "Cryptographic audit trail"
+            "description": "Current audit trail and integrity result"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "SystemTaskPayload": {
+        "type": "object",
+        "required": [
+          "task_id",
+          "target_identifier",
+          "primary_metric"
+        ],
+        "properties": {
+          "task_id": {
+            "type": "string"
+          },
+          "target_identifier": {
+            "type": "string"
+          },
+          "primary_metric": {
+            "type": "number"
+          },
+          "secondary_metric": {
+            "type": "number",
+            "default": 0
+          },
+          "status_descriptor": {
+            "type": "string",
+            "default": "NOMINAL"
+          },
+          "is_critical_flag": {
+            "type": "boolean",
+            "default": false
+          },
+          "attributes": {
+            "type": "object"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       }

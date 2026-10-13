@@ -1,236 +1,233 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fastq Quality Trimmer — Operations Console</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --bg: #090d16;
-            --card: #111827;
-            --border: #1f293d;
-            --accent: #3b82f6;
-            --accent-glow: rgba(59, 130, 246, 0.25);
-            --text: #f3f4f6;
-            --text-muted: #9ca3af;
-            --danger: #ef4444;
-            --warning: #f59e0b;
-            --success: #10b981;
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: 'Inter', sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            padding: 2rem;
-            min-height: 100vh;
-        }
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 1.5rem;
-            margin-bottom: 2rem;
-        }
-        .header-title h1 { font-size: 1.6rem; font-weight: 700; color: #fff; }
-        .header-title p { color: var(--text-muted); font-size: 0.9rem; margin-top: 0.25rem; }
-        .badge {
-            display: inline-block;
-            padding: 0.3rem 0.8rem;
-            border-radius: 9999px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            background: var(--accent-glow);
-            color: var(--accent);
-            border: 1px solid var(--accent);
-        }
-        .grid {
-            display: grid;
-            grid-template-columns: 1fr 1.2fr;
-            gap: 1.5rem;
-        }
-        .card {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 1.5rem;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-        }
-        .card h2 {
-            font-size: 1.1rem;
-            font-weight: 600;
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        .form-group { margin-bottom: 1rem; }
-        label { display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.4rem; }
-        input, select, textarea {
-            width: 100%;
-            padding: 0.65rem 0.9rem;
-            background: #0d1322;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            color: #fff;
-            font-family: inherit;
-            font-size: 0.9rem;
-        }
-        input:focus, textarea:focus { outline: none; border-color: var(--accent); }
-        .btn {
-            background: var(--accent);
-            color: #fff;
-            border: none;
-            padding: 0.7rem 1.4rem;
-            border-radius: 6px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: 0.2s;
-            width: 100%;
-        }
-        .btn:hover { background: #2563eb; }
-        .terminal {
-            background: #060911;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 1rem;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.85rem;
-            color: #10b981;
-            height: 380px;
-            overflow-y: auto;
-            white-space: pre-wrap;
-        }
-        .metrics-bar {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
-        .metric-box {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 1rem;
-            text-align: center;
-        }
-        .metric-val { font-size: 1.4rem; font-weight: 700; color: #fff; margin-top: 0.25rem; }
-        .metric-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; }
-    </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="Trim FASTQ reads locally in your browser with quality and adapter clipping.">
+  <title>FASTQ Quality Trimmer</title>
+  <style>
+    :root { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+      color: #e8edf6; background: #0a1020; line-height: 1.5; }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    main { max-width: 1160px; padding: 26px 22px 48px; margin: 0 auto; }
+    header { margin-bottom: 24px; border-bottom: 1px solid #28354a; padding-bottom: 22px; }
+    .eyebrow { color: #9dbdfb; font-size: .72rem; font-weight: 750; letter-spacing: .13em; text-transform: uppercase; }
+    h1 { font-size: clamp(1.85rem, 4vw, 2.65rem); letter-spacing: -.04em;
+      margin: 5px 0; line-height: 1.2; }
+    h2 { font-size: 1.12rem; margin: 0 0 14px; letter-spacing: -.01em; }
+    p { color: #b1bed1; margin: 7px 0; }
+    .layout { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
+    .panel { border: 1px solid #293950; background: #111c30; border-radius: 14px; padding: 22px; }
+    .panel + .panel { min-width: 0; }
+    .lead { margin-bottom: 18px; font-size: .92rem; }
+    label { display: block; margin: 0 0 6px; font-size: .83rem; color: #cad6e8; font-weight: 650; }
+    input, select, textarea { background: #0a1426; color: #f5f7fc; border: 1px solid #3d506a;
+      border-radius: 8px; padding: 10px 11px; width: 100%; font: inherit; }
+    input[type="file"] { cursor: pointer; font-size: .86rem; }
+    textarea { resize: vertical; min-height: 154px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: .81rem; line-height: 1.5; }
+    input:focus-visible, select:focus-visible, textarea:focus-visible,
+    button:focus-visible, a:focus-visible { outline: 2px solid #79acff; outline-offset: 3px; }
+    .field { margin: 0 0 16px; }
+    .hint { font-size: .78rem; color: #acbdd3; margin-top: 6px; }
+    .divider { text-align: center; color: #aebdd0; font-size: .78rem; margin: 10px 0; }
+    .settings { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; }
+    .settings .field { margin: 0; }
+    .settings input, .settings select { padding: 9px 10px; }
+    .full { grid-column: 1/-1; }
+    details { margin: 16px 0; border-top: 1px solid #293950; padding-top: 15px; }
+    summary { cursor: pointer; color: #d9e6fa; font-weight: 650; }
+    details .settings { margin-top: 15px; }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+    button { cursor: pointer; background: #3979e7; color: white; border: 1px solid transparent;
+      border-radius: 8px; font: inherit; font-weight: 680; padding: 11px 16px; }
+    button:hover:not(:disabled) { background: #2f66c6; }
+    button.secondary { background: #1d2d47; border-color: #435b7e; }
+    button.secondary:hover:not(:disabled) { background: #2b3e5c; }
+    button:disabled { cursor: not-allowed; opacity: .48; }
+    .status { border: 1px solid #304660; border-radius: 9px; background: #0b1629;
+      padding: 13px; min-height: 50px; color: #bdcff0; font-size: .88rem; overflow-wrap: anywhere; }
+    .status.error { color: #ffd6d6; border-color: #b45665; background: #321b28; }
+    .status.success { color: #adf4d4; border-color: #307e67; background: #102c30; }
+    .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 15px 0 20px; }
+    .stat { background: #0b172b; border: 1px solid #2a3e59; border-radius: 10px; padding: 13px; }
+    .stat strong { display: block; font-size: 1.3rem; font-variant-numeric: tabular-nums; }
+    .stat span { color: #adc0d9; font-size: .79rem; }
+    .privacy { margin-top: 22px; border-top: 1px solid #293950; padding-top: 15px; font-size: .8rem; }
+    .privacy strong { color: #e1eaf7; }
+    footer { color: #aebcd0; font-size: .78rem; margin-top: 22px; }
+    a { color: #a9caff; }
+    @media (max-width: 800px) { .layout { grid-template-columns: 1fr; } main { padding: 18px 14px 36px; }
+      .panel { padding: 17px; } }
+    @media (max-width: 380px) { .settings { grid-template-columns: 1fr; } }
+  </style>
 </head>
 <body>
+<main>
+  <header>
+    <div class="eyebrow">Sequencing utilities / Single-end FASTQ</div>
+    <h1>FASTQ Quality Trimmer</h1>
+    <p>Adapter clipping and base-quality filtering without uploading sequencing data.</p>
+  </header>
 
-    <div class="header">
-        <div class="header-title">
-            <h1>Fastq Quality Trimmer</h1>
-            <p>Domain: Clinical & Cryptographic AI | Standard: CAP / CLSI / NIST Standards | LabMind-Atlas Architecture</p>
-        </div>
-        <div>
-            <span class="badge">Air-Gapped Active</span>
-            <span class="badge" style="background: rgba(16,185,129,0.2); color: #10b981; border-color: #10b981;">Zero-PHI Guard Active</span>
-        </div>
-    </div>
+  <div class="layout">
+    <section class="panel" aria-labelledby="input-title">
+      <h2 id="input-title">1. Input &amp; parameters</h2>
+      <p class="lead">Choose an uncompressed FASTQ file, or paste FASTQ text. If both are present, the file takes priority.</p>
+      <div class="field">
+        <label for="file">FASTQ file (.fastq, .fq)</label>
+        <input id="file" type="file" accept=".fastq,.fq,.txt,text/plain">
+        <div class="hint">Plain-text FASTQ only, maximum 20 MB. FASTQ.gz requires decompression first.</div>
+      </div>
+      <div class="divider">OR PASTE FASTQ</div>
+      <div class="field">
+        <label for="source">FASTQ text</label>
+        <textarea id="source" spellcheck="false" placeholder="@read1&#10;ACGT...&#10;+&#10;IIII..."></textarea>
+      </div>
+      <button id="example" type="button" class="secondary">Load example reads</button>
 
-    <div class="metrics-bar">
-        <div class="metric-box">
-            <div class="metric-label">System Status</div>
-            <div class="metric-val" style="color: var(--success);" id="m-status">OPTIMAL</div>
+      <h2 style="margin-top:24px">Trimming parameters</h2>
+      <div class="settings">
+        <div class="field"><label for="phred">Phred offset</label>
+          <select id="phred"><option value="33">Phred+33</option><option value="64">Phred+64</option></select></div>
+        <div class="field"><label for="minLength">Minimum retained length</label>
+          <input id="minLength" type="number" min="1" step="1" value="36"></div>
+        <div class="field"><label for="windowSize">Sliding window (bases)</label>
+          <input id="windowSize" type="number" min="1" step="1" value="4"></div>
+        <div class="field"><label for="windowQuality">Mean window Q threshold</label>
+          <input id="windowQuality" type="number" min="0" step="0.5" value="15"></div>
+        <div class="field"><label for="leading">Leading-base minimum Q</label>
+          <input id="leading" type="number" min="0" step="1" value="3"></div>
+        <div class="field"><label for="trailing">Trailing-base minimum Q</label>
+          <input id="trailing" type="number" min="0" step="1" value="3"></div>
+        <div class="field full"><label for="adapter">Adapter sequence (optional)</label>
+          <input id="adapter" type="text" value="" placeholder="AGATCGGAAGAGC" spellcheck="false"></div>
+      </div>
+      <details>
+        <summary>Advanced adapter settings</summary>
+        <div class="settings">
+          <div class="field"><label for="adapterSeedLength">Exact seed length</label>
+            <input id="adapterSeedLength" type="number" min="1" step="1" value="8"></div>
+          <div class="field"><label for="adapterMinMatch">Minimum overlap</label>
+            <input id="adapterMinMatch" type="number" min="1" step="1" value="10"></div>
+          <div class="field full"><label for="adapterMismatchRate">Maximum mismatch fraction (0–1)</label>
+            <input id="adapterMismatchRate" type="number" min="0" max="1" step="0.01" value="0.1"></div>
         </div>
-        <div class="metric-box">
-            <div class="metric-label">Tasks Processed</div>
-            <div class="metric-val" id="m-tasks">142</div>
-        </div>
-        <div class="metric-box">
-            <div class="metric-label">Audit Blocks Signed</div>
-            <div class="metric-val" id="m-audit">142</div>
-        </div>
-        <div class="metric-box">
-            <div class="metric-label">PHI Interceptions</div>
-            <div class="metric-val" style="color: var(--accent);" id="m-phi">0</div>
-        </div>
-    </div>
+      </details>
+      <div class="actions"><button id="process" type="button">Trim reads</button></div>
+    </section>
 
-    <div class="grid">
-        <div class="card">
-            <h2>⚙️ Dispatch Distributed Component Audit</h2>
-            <div class="form-group">
-                <label>Task / Sample ID</label>
-                <input type="text" id="task_id" value="TASK-2026-LIVE-01">
-            </div>
-            <div class="form-group">
-                <label>Target Identifier</label>
-                <input type="text" id="target_id" value="SPECIMEN-ALPHA-77">
-            </div>
-            <div class="form-group">
-                <label>Primary Measurement / Value</label>
-                <input type="number" id="primary_metric" value="29.4" step="0.1">
-            </div>
-            <div class="form-group">
-                <label>Secondary Metric / Kinetic Index</label>
-                <input type="number" id="secondary_metric" value="14.8" step="0.1">
-            </div>
-            <div class="form-group">
-                <label>Status / Phenotype Descriptor</label>
-                <input type="text" id="status_descriptor" value="DISCORDANT_ANOMALY">
-            </div>
-            <div class="form-group">
-                <label><input type="checkbox" id="is_critical" checked> Trigger Emergency / Critical Flag</label>
-            </div>
-            <button class="btn" onclick="runAudit()">Execute Distributed Component Audit</button>
-        </div>
+    <section class="panel" aria-labelledby="results-title">
+      <h2 id="results-title">2. Results</h2>
+      <div id="status" class="status" role="status" aria-live="polite">Ready. Load an example or select a FASTQ file to begin.</div>
+      <div class="stats" aria-label="Trimming summary">
+        <div class="stat"><strong id="processed">—</strong><span>Reads processed</span></div>
+        <div class="stat"><strong id="retained">—</strong><span>Reads retained</span></div>
+        <div class="stat"><strong id="dropped">—</strong><span>Reads dropped</span></div>
+        <div class="stat"><strong id="removed">—</strong><span>Bases removed</span></div>
+      </div>
+      <div class="field">
+        <label for="preview">Trimmed FASTQ preview (first 4,000 characters)</label>
+        <textarea id="preview" readonly spellcheck="false" placeholder="Results appear after processing."></textarea>
+      </div>
+      <button id="download" type="button" disabled>Download trimmed FASTQ</button>
+      <p class="privacy"><strong>Privacy:</strong> Processing and downloads run entirely inside your browser.
+        No FASTQ data is transmitted to a server. No cookies, telemetry, or external assets are used.</p>
+      <p class="hint">Single-end reads only. Simplified adapter seed-and-extend algorithm, not a
+        drop-in replacement for Trimmomatic or a validated production genomics pipeline.</p>
+    </section>
+  </div>
+  <footer><a href="https://github.com/abusuraihsakhri/fastq-quality-trimmer">Source repository</a> · MIT licensed</footer>
+</main>
+<script type="module">
+  import { trimFastq } from "./trimmer.mjs";
 
-        <div class="card">
-            <h2>📊 Real-Time Consensus Dossier & Audit Log</h2>
-            <div class="terminal" id="outputConsole">// Fastq Quality Trimmer Operations Console Ready
-// Connection established with Air-Gapped Supervisor
-// Cryptographic HMAC-SHA256 audit ledger loaded.
-// Ready for live task payload dispatch...</div>
-        </div>
-    </div>
+  const el = id => document.getElementById(id);
+  const number = value => Number(value).toLocaleString("en-US");
+  let downloadUrl = null;
+  let downloadName = "trimmed.fastq";
 
-    <script>
-        async function runAudit() {
-            const consoleEl = document.getElementById('outputConsole');
-            consoleEl.innerText = "// Dispatching task across specialized workers...
-// Invoking InvariantQCWorker, SafetyEscalationWorker, ProtocolWorker...";
-
-            const payload = {
-                task_id: document.getElementById('task_id').value,
-                target_identifier: document.getElementById('target_id').value,
-                primary_metric: parseFloat(document.getElementById('primary_metric').value),
-                secondary_metric: parseFloat(document.getElementById('secondary_metric').value),
-                status_descriptor: document.getElementById('status_descriptor').value,
-                is_critical_flag: document.getElementById('is_critical').checked
-            };
-
-            try {
-                const res = await fetch('/api/audit', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                const data = await res.json();
-                consoleEl.innerText = JSON.stringify(data, null, 2);
-                document.getElementById('m-tasks').innerText = parseInt(document.getElementById('m-tasks').innerText) + 1;
-                document.getElementById('m-audit').innerText = parseInt(document.getElementById('m-audit').innerText) + 1;
-            } catch (err) {
-                consoleEl.innerText = "// Offline / Simulation Output:\n" + JSON.stringify({
-                    dossier_id: "DOSSIER-SIM-" + Math.floor(Math.random()*10000),
-                    system: "fastq-quality-trimmer",
-                    domain: "Clinical & Cryptographic AI",
-                    task_id: payload.task_id,
-                    overall_urgency: payload.is_critical_flag ? "CRITICAL_STAT_PANIC" : "ELEVATED_RISK",
-                    integrity_status: "DISCORDANT_ANOMALY",
-                    alerts: [
-                        { worker: "InvariantQCWorker", alert: "Primary metric exceeds upper reference bound" },
-                        { worker: "SafetyEscalationWorker", alert: "Critical emergency interlock flag active" }
-                    ],
-                    audit_hash: "HMAC_SHA256_e83f9a72b941d6c381f9"
-                }, null, 2);
-            }
-        }
-    </script>
+  function resetDownload() {
+    el("download").disabled = true;
+    if (downloadUrl !== null) {
+      URL.revokeObjectURL(downloadUrl);
+      downloadUrl = null;
+    }
+  }
+  function setStatus(message, kind = "") {
+    el("status").textContent = message;
+    el("status").className = "status" + (kind ? " " + kind : "");
+  }
+  function clearStats() {
+    for (const id of ["processed", "retained", "dropped", "removed"]) el(id).textContent = "—";
+    el("preview").value = "";
+  }
+  function options() {
+    const intFields = ["phred", "windowSize", "leading", "trailing",
+      "minLength", "adapterSeedLength", "adapterMinMatch"];
+    const floatFields = ["windowQuality", "adapterMismatchRate"];
+    const result = {};
+    for (const id of intFields.concat(floatFields)) {
+      if (el(id).value.trim() === "") throw new Error("Missing parameter: " + id);
+      result[id] = Number(el(id).value);
+    }
+    result.adapter = el("adapter").value.trim().toUpperCase();
+    return result;
+  }
+  el("example").addEventListener("click", () => {
+    const adapter = "AGATCGGAAGAGC";
+    const records = [
+      ["@high-quality", "ACGT".repeat(12) + "AC", "I".repeat(50)],
+      ["@adapter", "ACGT".repeat(10) + adapter, "I".repeat(53)],
+      ["@low-quality", "ACGT".repeat(10), "#".repeat(40)]
+    ];
+    el("file").value = "";
+    el("source").value = records.map(([h, s, q]) => [h, s, "+", q].join("\n")).join("\n") + "\n";
+    el("adapter").value = adapter;
+    resetDownload();
+    clearStats();
+    setStatus("Three example reads loaded. Select “Trim reads” to process them.");
+  });
+  el("process").addEventListener("click", async () => {
+    resetDownload();
+    clearStats();
+    el("process").disabled = true;
+    setStatus("Processing FASTQ locally…");
+    try {
+      const file = el("file").files[0];
+      if (file && file.size > 20 * 1024 * 1024) throw new Error("FASTQ file exceeds the 20 MB browser limit.");
+      const input = file ? await file.text() : el("source").value;
+      if (!input.trim()) throw new Error("Select a FASTQ file or paste FASTQ text.");
+      if (input.length > 20 * 1024 * 1024) throw new Error("FASTQ text exceeds the 20 MB browser limit.");
+      const result = trimFastq(input, options());
+      const { stats } = result;
+      el("processed").textContent = number(stats.processed);
+      el("retained").textContent = number(stats.retained);
+      el("dropped").textContent = number(stats.dropped);
+      el("removed").textContent = number(stats.basesBefore - stats.basesAfter);
+      el("preview").value = result.fastq.slice(0, 4000);
+      const blob = new Blob([result.fastq], { type: "text/plain;charset=utf-8" });
+      downloadUrl = URL.createObjectURL(blob);
+      downloadName = file ? file.name.replace(/\.(fastq|fq|txt)$/i, "") + ".trimmed.fastq" : "trimmed.fastq";
+      el("download").disabled = false;
+      setStatus(`Complete: ${number(stats.retained)} of ${number(stats.processed)} reads retained.`, "success");
+    } catch (error) {
+      setStatus("Unable to process FASTQ: " + error.message, "error");
+    } finally {
+      el("process").disabled = false;
+    }
+  });
+  el("download").addEventListener("click", () => {
+    if (!downloadUrl) return;
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+    link.download = downloadName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  });
+</script>
 </body>
 </html>

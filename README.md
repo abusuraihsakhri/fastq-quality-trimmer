@@ -1,165 +1,90 @@
-# Fastq Quality Trimmer
+# FASTQ Quality Trimmer
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12-3776AB.svg?logo=python&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688.svg?logo=fastapi&logoColor=white)
+A small single-end FASTQ quality and adapter trimmer with a standard-library Python CLI and a dependency-free browser interface. The algorithms are intentionally simple and auditable; this is **not** the full Trimmomatic implementation.
 
-A small, auditable reimplementation of Trimmomatic's read-trimming logic for FASTQ files.
+## Features
 
-## What It Does
+- **ILLUMINACLIP (simplified):** exact adapter-prefix seed followed by mismatch-tolerant extension.
+- **LEADING / TRAILING:** remove bases below a minimum Phred score at each end.
+- **SLIDINGWINDOW:** cut at the first window whose mean quality falls below the threshold.
+- **MINLEN:** discard short trimmed reads.
+- Preserve read headers and FASTQ separator annotations; reject truncated records, invalid quality encodings, and sequence/quality length mismatches.
+- Summarize processed/retained/dropped reads and sequence lengths. Write Python CLI output atomically to avoid destroying valid output when an input fails validation.
 
-FASTQ Quality Trimmer provides the following trimming operations:
+## Browser application
 
-- **SLIDINGWINDOW** - Trim once the mean quality within a sliding window drops below a threshold
-- **LEADING** - Clip low-quality bases from the 5' end
-- **TRAILING** - Clip low-quality bases from the 3' end
-- **ILLUMINACLIP** - A simplified seed-and-extend adapter clip
-- **MINLEN** - Drop reads that are too short after trimming
+The `web/` directory is a static, responsive FASTQ trimmer. It runs entirely in your browser with **JavaScript**, not server-side Python, Pyodide, or a remote API. Reads stay on your device; the app makes no external network requests. Select an uncompressed `.fastq` / `.fq` file (up to 20 MB), or paste FASTQ content, adjust the parameters, run trimming, and download a trimmed FASTQ file. A three-read example is provided.
 
-## Installation
+For local use:
 
 ```bash
-# Clone the repository
+python -m http.server 8080 --directory web
+# Open http://localhost:8080
+```
+
+Browsers supporting standard ES modules, File APIs and Blob downloads are required. Compressed `.fastq.gz` input, paired-end synchronization and streaming multi-gigabyte datasets are not implemented. The browser version uses JavaScript that mirrors the Python single-end algorithm, covered by Node tests.
+
+## Python installation
+
+Python 3.10 or later. Core FASTQ trimming uses only the Python standard library.
+
+```bash
 git clone https://github.com/abusuraihsakhri/fastq-quality-trimmer.git
 cd fastq-quality-trimmer
-
-# Install dependencies
-pip install -e .
-
-# Or install with development dependencies
-pip install -e ".[dev]"
+python -m pip install -e .
 ```
 
-## Usage
+The install brings in FastAPI, Uvicorn and Pydantic for optional auxiliary supervisor commands. Direct use of `python fastq_trimmer.py` does not require these packages.
 
-### Command Line Interface
-
-Trim a FASTQ file:
+## Command-line usage
 
 ```bash
-python fastq_trimmer.py -i input.fastq -o output.fastq
+python fastq_trimmer.py -i reads.fastq -o reads.trimmed.fastq \
+  --phred 33 --window-size 4 --window-quality 15 \
+  --leading 3 --trailing 3 --minlen 36 \
+  --adapter AGATCGGAAGAGC
+
+# Or, after installation:
+fastq-trimmer -i reads.fastq -o reads.trimmed.fastq --minlen 36
 ```
 
-With custom parameters:
-
-```bash
-python fastq_trimmer.py -i input.fastq -o output.fastq \
-    --phred 33 \
-    --window-size 4 \
-    --window-quality 15 \
-    --leading 3 \
-    --trailing 3 \
-    --minlen 36 \
-    --adapter AGATCGGAAGAGC
-```
-
-### CLI Parameters
-
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `-i, --input` | (required) | Input FASTQ file |
-| `-o, --output` | (required) | Output (trimmed) FASTQ file |
-| `--phred` | 33 | Quality encoding (33 or 64) |
-| `--window-size` | 4 | SLIDINGWINDOW: bases per window |
-| `--window-quality` | 15.0 | SLIDINGWINDOW: minimum mean quality |
-| `--leading` | 3 | LEADING: minimum quality at read start |
-| `--trailing` | 3 | TRAILING: minimum quality at read end |
-| `--minlen` | 36 | MINLEN: minimum read length to keep |
-| `--adapter` | None | Adapter sequence to clip |
-| `--adapter-seed-len` | 8 | Adapter clip: exact-match seed length |
-| `--adapter-min-match` | 10 | Adapter clip: minimum aligned overlap |
-| `--adapter-max-mismatch-rate` | 0.1 | Adapter clip: max mismatch fraction |
+Defaults: Phred+33, window of 4 bases, window quality 15, leading/trailing quality 3, minimum length 36. Adapter clipping is disabled unless `--adapter` is specified. Optional adapter settings: `--adapter-seed-len 8`, `--adapter-min-match 10`, and `--adapter-max-mismatch-rate 0.1`. Input and output must be different files. The input must be uncompressed FASTQ text.
 
 ### Python API
 
 ```python
 from fastq_trimmer import TrimParams, process_fastq
 
-params = TrimParams(
-    phred=33,
-    window_size=4,
-    window_quality=15.0,
-    leading=3,
-    trailing=3,
-    minlen=36,
-    adapter="AGATCGGAAGAGC"
-)
-
-with open("input.fastq") as in_f, open("output.fastq", "w") as out_f:
-    stats = process_fastq(iter(in_f), out_f, params)
-
-print(f"Processed: {stats.reads_processed}, Retained: {stats.reads_retained}")
+params = TrimParams(minlen=30, adapter="AGATCGGAAGAGC")
+with open("reads.fastq", encoding="utf-8") as src, \
+     open("trimmed.fastq", "w", encoding="utf-8") as dest:
+    stats = process_fastq(iter(src), dest, params)
+print(stats.reads_processed, stats.reads_retained, stats.mean_len_after)
 ```
+
+Unlike the CLI, `process_fastq()` writes directly to its supplied output stream; callers are responsible for output transaction safety.
+
+## Optional supervisor and REST API
+
+`cli.py`, `agents/`, `enrichment.py` and `simulator.py` provide a separate **mock demonstration supervisor** with rule-based alerts, synthetic metrics and an in-memory HMAC audit trail. They do **not** trim reads and are not clinical decision support or validated CAP/CLSI compliance tools. The mock model backend never performs genuine LLM inference.
+
+```bash
+python cli.py serve --host 127.0.0.1 --port 8000
+# GET http://127.0.0.1:8000/health
+```
+
+To use Docker Compose, supply a strong `AUDIT_SECRET_KEY` environment value first. Compose binds port 8000 on localhost by default. The separate API has no user authentication and should not be published directly to the internet. The identifier-pattern filter is **not** sufficient to guarantee PHI de-identification; do not send clinical or sensitive personal records to it. Ledger integrity checking verifies HMAC signatures within the running process, but the ledger is not persisted between restarts.
 
 ## Testing
 
-Run the full test suite:
-
 ```bash
-pytest -v
+python -m pip install -e ".[dev]"
+python -m pytest -q
+node --test web/test_trimmer.mjs   # Node.js 22
 ```
 
-Run specific test files:
-
-```bash
-pytest test_fastq_trimmer.py -v
-pytest tests/ -v
-```
-
-## Security
-
-### PHI Guard
-The system includes a Zero-PHI Outbound Interceptor that blocks SSNs, MRNs, phone numbers, and patient identifiers from being logged or output.
-
-### Audit Trail
-HMAC-SHA256 tamper-evident audit trail for all operations. Set the `AUDIT_SECRET_KEY` environment variable for production use:
-
-```bash
-# Generate a secure key
-python -c "import os; print(os.urandom(32).hex())"
-
-# Set it
-export AUDIT_SECRET_KEY="your-secure-key-hello"
-```
-
-See `.env.example` for configuration options.
-
-## Docker Deployment
-
-```bash
-# Build and run with Docker Compose
-AUDIT_SECRET_KEY=$(python -c "import os; print(os.urandom(32).hex())") docker-compose up --build
-
-# Or build and run manually
-docker build -t fastq-quality-trimmer .
-docker run -p 8000:8000 -e AUDIT_SECRET_KEY="your-key" fastq-quality-trimmer
-```
-
-## Project Structure
-
-```
-fastq-quality-trimmer/
-├── fastq_trimmer.py      # Core trimming algorithms and CLI
-├── cli.py                # Enterprise supervisor CLI
-├── enrichment.py         # Enrichment feature engines
-├── simulator.py          # High-throughput simulation
-├── agents/               # Multi-agent supervisor system
-│   ├── base.py           # Security, PHI guard, audit trail
-│   ├── models.py         # Pydantic data models
-│   ├── supervisor.py     # Supervisor orchestrator
-│   ├── workers.py        # Specialized worker agents
-│   ├── api.py            # FastAPI REST server
-│   ├── metrics.py        # Prometheus metrics
-│   ├── learning.py       # Bayesian calibration engine
-│   └── streamer.py       # WebSocket telemetry
-├── tests/                # Pytest test suite
-├── web/                  # Operations console (HTML)
-├── pyproject.toml        # Project metadata and dependencies
-├── Dockerfile            # Container build
-├── docker-compose.yml    # Container orchestration
-└── .github/workflows/    # CI/CD pipeline
-```
+GitHub Actions executes the Python test suite on 3.10–3.13 and the JavaScript engine tests. On `master`, a successful run also attempts publication of the `web/` app to GitHub Pages.
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) for details.
+MIT — see [LICENSE](LICENSE).
