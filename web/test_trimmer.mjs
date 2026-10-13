@@ -49,7 +49,7 @@ test("malformed FASTQ and invalid quality are rejected", () => {
   assert.throws(() => trimFastq("@only\nA\n+\n"), /Incomplete/);
   assert.throws(() => trimFastq(record("bad", "AAA", "II")), /length mismatch/);
   assert.throws(() => trimFastq(record("bad", "AA", "  "), { minLength: 1 }), /Invalid Phred/);
-  assert.throws(() => trimFastq(record("bad", "AA", "II"), { phred: 64, minLength: 1 }), /Invalid Phred/);
+  assert.throws(() => trimFastq(record("bad", "AA", "##"), { phred: 64, minLength: 1 }), /Invalid Phred/);
   assert.throws(() => trimFastq("not-fastq\nAA\n+\nII"), /header/);
 });
 
