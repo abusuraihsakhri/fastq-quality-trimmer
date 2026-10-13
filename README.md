@@ -1,5 +1,7 @@
 # FASTQ Quality Trimmer
 
+### [Open the Live Application →](https://abusuraihsakhri.github.io/fastq-quality-trimmer/)
+
 A small single-end FASTQ quality and adapter trimmer with a standard-library Python CLI and a dependency-free browser interface. The algorithms are intentionally simple and auditable; this is **not** the full Trimmomatic implementation.
 
 ## Features
