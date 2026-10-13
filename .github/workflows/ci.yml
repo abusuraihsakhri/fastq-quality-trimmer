@@ -65,3 +65,23 @@ jobs:
           path: web
       - id: deployment
         uses: actions/deploy-pages@v4
+      - name: Verify published HTML and browser module
+        env:
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          set -euo pipefail
+          html="$(mktemp)"
+          module="$(mktemp)"
+          verified=0
+          for attempt in 1 2 3 4 5 6; do
+            if curl -fsSL --max-time 15 "${PAGE_URL}" -o "$html" &&
+               curl -fsSL --max-time 15 "${PAGE_URL%/}/trimmer.mjs" -o "$module"; then
+              verified=1
+              break
+            fi
+            sleep 5
+          done
+          test "$verified" = "1"
+          grep -q 'id="process"' "$html"
+          grep -q 'export function trimFastq' "$module"
+          echo "Verified live HTML and browser module at ${PAGE_URL}"
