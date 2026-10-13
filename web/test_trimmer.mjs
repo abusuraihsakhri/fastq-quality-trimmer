@@ -46,7 +46,7 @@ test("CRLF and missing final newline are accepted", () => {
 });
 
 test("malformed FASTQ and invalid quality are rejected", () => {
-  assert.throws(() => trimFastq("@only\nA\n+\n"), /Incomplete/);
+  assert.throws(() => trimFastq("@only\nA\n+"), /Incomplete/);
   assert.throws(() => trimFastq(record("bad", "AAA", "II")), /length mismatch/);
   assert.throws(() => trimFastq(record("bad", "AA", "  "), { minLength: 1 }), /Invalid Phred/);
   assert.throws(() => trimFastq(record("bad", "AA", "##"), { phred: 64, minLength: 1 }), /Invalid Phred/);
